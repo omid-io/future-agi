@@ -1195,14 +1195,12 @@ def _record_target_agent_facts(
         changed.append("target_speaks_first")
     if changed:
         agent_definition.save(update_fields=[*changed, "updated_at"])
-    # Calls pin the latest version; one older than the provider would report none.
-    if "provider" in changed or (
+    versioned = agent_definition.latest_version is not None
+    # Calls pin the latest version; one older than the provider would report
+    # none. An unversioned agent is read live, so it gets no version for this.
+    if (versioned and "provider" in changed) or (
         prompt
-        and (
-            agent_definition.latest_version is None
-            or "description" in changed
-            or "assistant_id" in changed
-        )
+        and (not versioned or "description" in changed or "assistant_id" in changed)
     ):
         agent_definition.create_version(
             description=agent_definition.description,
