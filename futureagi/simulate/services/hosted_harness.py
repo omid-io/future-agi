@@ -1195,7 +1195,8 @@ def _record_target_agent_facts(
         changed.append("target_speaks_first")
     if changed:
         agent_definition.save(update_fields=[*changed, "updated_at"])
-    if (
+    # Calls pin the latest version; one older than the provider would report none.
+    if "provider" in changed or (
         prompt
         and (
             agent_definition.latest_version is None
@@ -1204,7 +1205,7 @@ def _record_target_agent_facts(
         )
     ):
         agent_definition.create_version(
-            description=prompt,
+            description=agent_definition.description,
             commit_message="hosted harness target agent prompt",
             status="active",
         )

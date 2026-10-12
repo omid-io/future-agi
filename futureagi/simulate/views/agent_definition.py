@@ -40,6 +40,7 @@ from simulate.services.agent_definition import (
     is_masked,
     resolve_api_key_for_version,
     resolve_stored_api_key,
+    sync_edited_agent_credentials,
     sync_provider_credentials,
 )
 from simulate.services.types.agent_definition import ProviderCredentialsInput
@@ -700,6 +701,7 @@ class EditAgentDefinitionView(APIView):
                 "websocket_url",
                 "websocket_headers",
             ]
+            previous_provider = agent.provider
             for field in update_fields:
                 if field == "api_key" and preserve_existing_api_key:
                     continue
@@ -719,7 +721,6 @@ class EditAgentDefinitionView(APIView):
                 )
             else:
                 existing_api_key = None
-            version = agent.active_version or agent.latest_version
 
             creds_input = ProviderCredentialsInput(
                 provider=validated.get("provider") or agent.provider or "",
@@ -735,8 +736,7 @@ class EditAgentDefinitionView(APIView):
                 livekit_max_concurrency=validated.get("livekit_max_concurrency"),
                 provider_was_provided="provider" in request.data,
             )
-            if version:
-                sync_provider_credentials(version, creds_input)
+            sync_edited_agent_credentials(agent, previous_provider, creds_input)
             updated_agent = agent
 
             response_data = {

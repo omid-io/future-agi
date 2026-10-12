@@ -161,6 +161,45 @@ def sync_provider_credentials(version, data: ProviderCredentialsInput):
     creds.save()
 
 
+def create_active_version(
+    agent: AgentDefinition, credentials: ProviderCredentialsInput, commit_message: str
+) -> AgentVersion:
+    """Snapshot ``agent`` into a new active version that owns ``credentials``."""
+    version = agent.create_version(
+        description=agent.description,
+        commit_message=commit_message,
+        status=AgentVersion.StatusChoices.ACTIVE,
+    )
+    version.activate()
+    sync_provider_credentials(version, credentials)
+    # Re-snapshot now that ProviderCredentials exist (LiveKit fields)
+    version.configuration_snapshot = version.create_snapshot(
+        commit_message=version.commit_message or ""
+    )
+    version.save(update_fields=["configuration_snapshot"])
+    return version
+
+
+def sync_edited_agent_credentials(
+    agent: AgentDefinition,
+    previous_provider: str | None,
+    credentials: ProviderCredentialsInput,
+) -> None:
+    """Store an in-place edit's credentials on the version they belong to.
+
+    A provider change gets its own version, so calls pinned to the current one
+    keep reporting the provider they ran with.
+    """
+    if (agent.provider or "") != (previous_provider or ""):
+        create_active_version(
+            agent, credentials, f"Provider changed to {agent.provider or 'none'}"
+        )
+        return
+    version = agent.active_version or agent.latest_version
+    if version:
+        sync_provider_credentials(version, credentials)
+
+
 def resolve_api_key_for_version(version):
     """Read API key from version's credentials.
 

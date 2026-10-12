@@ -3983,3 +3983,44 @@ def test_hosted_transport_does_not_depend_on_tool_trace(
     response = auth_client.get(f"/simulate/v3/call-executions/{call.id}/")
     assert response.status_code == 200
     assert response.json()["transport"] == "livekit"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("put", "/simulate/agent-definitions/{}/edit/"),
+        ("patch", "/simulate/api/agent-definition-operations/{}/"),
+    ],
+)
+def test_provider_edit_labels_later_calls_without_relabelling_earlier_ones(
+    auth_client, test_execution, scenario, method, path
+):
+    agent = test_execution.agent_definition
+    agent.provider = "vapi"
+    agent.save(update_fields=["provider"])
+    ran_on_vapi = agent.create_version(
+        description="v1", commit_message="v1", status="active"
+    )
+    response = getattr(auth_client, method)(
+        path.format(agent.id),
+        {"provider": "retell", "api_key": "key_retell", "assistant_id": "agent_r"},
+        format="json",
+    )
+    assert response.status_code == 200, response.content
+    calls = [
+        CallExecution.objects.create(
+            test_execution=test_execution,
+            scenario=scenario,
+            status="completed",
+            agent_version=version,
+        )
+        # A new call pins the latest version, as hosted and SDK ingestion do.
+        for version in (ran_on_vapi, agent.latest_version)
+    ]
+    providers = [
+        auth_client.get(f"/simulate/v3/call-executions/{call.id}/").json()["provider"]
+        for call in calls
+    ]
+    assert providers == ["vapi", "retell"]
