@@ -137,7 +137,8 @@ class DatasetVersionItem(BaseModel):
             ),
             models.UniqueConstraint(
                 fields=["dataset_version", "external_id"],
-                condition=models.Q(deleted=False, external_id__isnull=False),
+                condition=models.Q(deleted=False, external_id__isnull=False)
+                & ~models.Q(external_id=""),
                 name="unique_dataset_version_external_id",
             ),
         ]

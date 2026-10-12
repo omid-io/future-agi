@@ -12,6 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name='datasetversionitem',
-            constraint=models.UniqueConstraint(condition=models.Q(('deleted', False), ('external_id__isnull', False)), fields=('dataset_version', 'external_id'), name='unique_dataset_version_external_id'),
+            constraint=models.UniqueConstraint(condition=models.Q(('deleted', False), ('external_id__isnull', False)) & ~models.Q(('external_id', '')), fields=('dataset_version', 'external_id'), name='unique_dataset_version_external_id'),
         ),
     ]
