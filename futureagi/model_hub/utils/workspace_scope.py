@@ -2,6 +2,7 @@ from django.db.models import Q
 
 from model_hub.models.ai_model import AIModel
 from model_hub.models.column_config import ColumnConfig
+from model_hub.models.dataset_versions import DatasetVersion
 from model_hub.models.develop_dataset import Column, Dataset
 from model_hub.models.develop_optimisation import OptimizationDataset
 from model_hub.models.evals_metric import UserEvalMetric
@@ -55,6 +56,19 @@ def request_workspace_filter(request=None, field_name="workspace"):
 
 def scoped_dataset_queryset(request=None):
     queryset = Dataset.no_workspace_objects.filter(
+        request_workspace_filter(request),
+        deleted=False,
+    )
+    organization = request_organization(request)
+    if organization is not None:
+        queryset = queryset.filter(organization=organization)
+    return queryset
+
+
+def scoped_dataset_version_queryset(request=None):
+    """Return dataset versions visible in the current org/workspace context."""
+
+    queryset = DatasetVersion.no_workspace_objects.filter(
         request_workspace_filter(request),
         deleted=False,
     )
