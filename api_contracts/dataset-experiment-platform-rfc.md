@@ -103,6 +103,27 @@ Scores may carry an optional JSON envelope in the first release:
 5. Move new UI/SDK/MCP calls to the run contract behind a feature flag.
 6. Retire only the duplicated paths after migration receipts and rollback evidence exist.
 
+### M1 compatibility read API
+
+The first adapter exposes the version projection without changing legacy dataset
+writes.  Both endpoints require authentication and apply the existing
+organization/workspace dataset scope:
+
+```text
+GET /model-hub/datasets/{dataset_id}/versions/
+GET /model-hub/datasets/{dataset_id}/versions/{version_id}/?limit=100&offset=0
+```
+
+The list response returns immutable version metadata and an active-item count.
+The detail response returns a bounded, deterministic page of active
+`DatasetVersionItem` records, including `example_id`, `content_hash`,
+`legacy_row`, and optional `source_trace_id`/`source_span_id` provenance.
+Deleted versions, deleted items, datasets outside the request tenant, and
+unknown IDs are not exposed.  `limit` is constrained to 1–500 and `offset` is
+non-negative.  This slice intentionally does not infer `input` or `expected`
+from legacy cells and does not add a split or analytics table; a later
+backfill must define that mapping explicitly before it writes records.
+
 ## Non-goals
 
 - no new warehouse
