@@ -320,7 +320,12 @@ def page_calls(page: dict[str, Any]) -> list[CallExecution]:
         str(call.id): call
         for call in CallExecution.objects.filter(
             id__in=page["page_ids"]
-        ).select_related("scenario", "test_execution__agent_definition")
+        ).select_related(
+            "scenario",
+            "test_execution__agent_definition",
+            "test_execution__agent_version",
+            "agent_version",
+        )
     }
     goals = {row["id"]: row["result_goal"] for row in page["rows"]}
     calls = []
